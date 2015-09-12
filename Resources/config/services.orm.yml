@@ -1,0 +1,12 @@
+services:
+    agentsib_crontab.manager.default:
+        class: AgentSIB\CrontabBundle\Doctrine\CrontabManager
+        arguments:
+            - @agentsib_crontab.command_parser
+            - @agentsib_crontab.entity_manager
+            - %agentsib_crontab.cronjob_class%
+        public: false
+
+    agentsib_crontab.entity_manager:
+        class: Doctrine\ORM\EntityManager
+        arguments: [%agentsib_crontab.model_manager_name%]

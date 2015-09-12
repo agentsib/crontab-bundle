@@ -3,25 +3,19 @@
 
 namespace AgentSIB\CrontabBundle\Doctrine;
 
+use AgentSIB\CrontabBundle\Model\AbstractCronjob;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\MappedSuperclass()
  */
-class AbstractCronjobEntity
+class AbstractCronjobEntity extends AbstractCronjob
 {
-    /**
-     * @var integer
-     *
-     * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="AUTO")
-     * @ORM\Column(name="id", type="integer")
-     */
-    protected $id;
-
     /**
      * @var string
      *
+     * @ORM\Id
+     * @ORM\GeneratedValue(strategy="NONE")
      * @ORM\Column(name="name", type="string", length=255)
      */
     protected $name;
@@ -64,7 +58,7 @@ class AbstractCronjobEntity
     /**
      * @var string
      *
-     * @ORM\Column(name="log_file", type="string", length=32)
+     * @ORM\Column(name="log_file", type="string", nullable=true, length=32)
      */
     protected $logFile;
 

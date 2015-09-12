@@ -19,10 +19,29 @@ class Configuration implements ConfigurationInterface
     {
         $treeBuilder = new TreeBuilder();
         $rootNode = $treeBuilder->root('agentsib_crontab');
+
+        $supportedDrivers = array('orm');
+
         $rootNode
             ->children()
+                ->scalarNode('db_driver')
+                    ->validate()
+                        ->ifNotInArray($supportedDrivers)
+                        ->thenInvalid('The driver %s is not supported. Please choose one of '.json_encode($supportedDrivers))
+                    ->end()
+                    ->defaultValue('orm')
+                    ->cannotBeOverwritten()
+                    //->isRequired()
+                    ->cannotBeEmpty()
+                ->end()
+                ->scalarNode('cronjob_class')
+                    ->isRequired()
+                    ->cannotBeEmpty()
+                ->end()
+                ->scalarNode('model_manager_name')->defaultNull()->end()
+                ->scalarNode('crontab_manager')->defaultValue('agentsib_crontab.manager.default')->end()
                 ->arrayNode('jobs')
-                ->useAttributeAsKey('job_id')->cannotBeOverwritten()
+                ->useAttributeAsKey('job_id')
                 ->prototype('array')
                     ->children()
                         ->scalarNode('expression')->example('0 1 * * *')->isRequired()->end()
@@ -31,7 +50,7 @@ class Configuration implements ConfigurationInterface
                             ->prototype('scalar')
                             ->end()
                         ->end()
-                        ->scalarNode('log_file')->end()
+                        ->scalarNode('log_file')->defaultNull()->end()
                     ->end()
                 ->end()
             ->end();
