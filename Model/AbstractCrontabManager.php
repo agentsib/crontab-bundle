@@ -116,8 +116,20 @@ abstract class AbstractCrontabManager
      */
     abstract public function getDatabaseCronjobs();
 
-    public function flush()
+
+    public function startCronjob(AbstractCronjob $cronjob)
     {
+        $this->om->refresh($cronjob);
+        $cronjob->setLastExecution(new \DateTime());
+        $cronjob->setLocked(true);
+        $this->om->flush();
+    }
+
+    public function stopCronjob(AbstractCronjob $cronjob, $responseCode = 0)
+    {
+        $this->om->refresh($cronjob);
+        $cronjob->setLastReturnCode($responseCode);
+        $cronjob->setLocked(false);
         $this->om->flush();
     }
 

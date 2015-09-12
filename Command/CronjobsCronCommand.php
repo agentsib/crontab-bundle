@@ -84,6 +84,8 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
             }
         }
 
+        $cronResponseCode = 0;
+
         if ($noneExecution) {
             if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
                 $output->writeln('');
@@ -97,6 +99,8 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                     try {
                         $process->checkTimeout();
                     } catch (\RuntimeException $e) {
+                        $cronResponseCode = 1;
+                        $manager->stopCronjob($manager->getCronjobById($jobId), -1);
                         if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
                             $output->writeln(sprintf('Cronjob <comment>%s</comment> <error>killed by timeout</error>.', $jobId));
                         }
@@ -111,6 +115,7 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                                 $output->writeln(sprintf('Cronjob <comment>%s</comment> success completed.', $jobId));
                             }
                         } else {
+                            $cronResponseCode = 1;
                             if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
                                 $output->writeln(sprintf('Cronjob <comment>%s</comment> completed. <error>Exit code: %s</error>', $jobId, $process->getExitCode()));
                             }
@@ -133,13 +138,13 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                 }
             }
         }
+        return $cronResponseCode;
     }
 
 
     private function executeCommand(AbstractCronjob $cronjob, InputInterface $input, OutputInterface $output)
     {
         $manager = $this->container->get('agentsib_crontab.manager');
-        $manager->flush();
 
         $executableFinder = new PhpExecutableFinder();
 
