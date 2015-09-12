@@ -2,12 +2,14 @@
     "name": "agentsib/crontab-bundle",
     "description": "Crontab bundle for Symfony2",
     "keywords": ["Symfony", "cron", "crontab", "cronjob", "task", "scheduler"],
+    "homepage": "https://github.com/agentsib/crontab-bundle",
     "type": "symfony-bundle",
     "license": "MIT",
     "authors": [
         {
             "name": "AgentSIB",
-            "email": "agentsib@gmail.com"
+            "email": "agentsib@gmail.com",
+            "homepage": "https://agentsib.ru"
         }
     ],
     "minimum-stability": "stable",
