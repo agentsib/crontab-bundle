@@ -130,6 +130,28 @@ abstract class AbstractCrontabManager
         $this->om->refresh($cronjob);
         $cronjob->setLastReturnCode($responseCode);
         $cronjob->setLocked(false);
+        $cronjob->setExecuteImmediately(false);
+        $this->om->flush();
+    }
+
+    public function enableCronjob(AbstractCronjob $cronjob)
+    {
+        $this->om->refresh($cronjob);
+        $cronjob->setDisabled(false);
+        $this->om->flush();
+    }
+
+    public function disableCronjob(AbstractCronjob $cronjob)
+    {
+        $this->om->refresh($cronjob);
+        $cronjob->setDisabled(true);
+        $this->om->flush();
+    }
+
+    public function executeImmediatelyCronjob(AbstractCronjob $cronjob)
+    {
+        $this->om->refresh($cronjob);
+        $cronjob->setExecuteImmediately(true);
         $this->om->flush();
     }
 

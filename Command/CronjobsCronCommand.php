@@ -50,14 +50,17 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
         foreach ($manager->getDatabaseCronjobs() as $cronjob) {
             /** @var AbstractCronjob $cronjob */
-            if ($cronjob->isDisabled() || $cronjob->isLocked() || !$cronjob->getCronExpression()) {
-                continue;
-            }
 
-            $cron = CronExpression::factory($cronjob->getCronExpression());
-            $newRunDate = $cron->getNextRunDate($cronjob->getLastExecution());
+            $newRunDate = new \DateTime();
             $newDate = new \DateTime();
 
+            if (!$cronjob->isExecuteImmediately()) {
+                if ($cronjob->isDisabled() || $cronjob->isLocked() || !$cronjob->getCronExpression()) {
+                    continue;
+                }
+                $cron = CronExpression::factory($cronjob->getCronExpression());
+                $newRunDate = $cron->getNextRunDate($cronjob->getLastExecution());
+            }
 
             if ($cronjob->isExecuteImmediately()) {
 
@@ -100,7 +103,7 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                         $process->checkTimeout();
                     } catch (\RuntimeException $e) {
                         $cronResponseCode = 1;
-                        $manager->stopCronjob($manager->getCronjobById($jobId), -1);
+                        $manager->stopCronjob($manager->getCronjobById($jobId), -10);
                         if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
                             $output->writeln(sprintf('Cronjob <comment>%s</comment> <error>killed by timeout</error>.', $jobId));
                         }

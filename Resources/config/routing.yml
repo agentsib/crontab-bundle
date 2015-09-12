@@ -1,0 +1,3 @@
+agentsib_cronjob_tasks:
+    path: /
+    defaults: { _controller: AgentSIBCrontabBundle:Cronjob:list }

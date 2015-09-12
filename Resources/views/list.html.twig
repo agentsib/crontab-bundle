@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AgentSIB Cronjobs</title>
+    <meta http-equiv="refresh" content="10">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"/>
+
+    <style>
+        * {
+            margin: 0;
+        }
+        html, body {
+            height: 100%;
+        }
+        .page-wrap {
+            min-height: 100%;
+            /* equal to footer height */
+            margin-bottom: -30px;
+        }
+        .page-wrap:after {
+            content: "";
+            display: block;
+        }
+        .site-footer, .page-wrap:after {
+            height: 30px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrap">
+    <div class="container">
+        <h1>AgentSIB Cronjobs</h1>
+
+        <a href="javascript:location.reload(1);" class="btn btn-primary pull-right">Refresh</a>
+        <table class="table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cron</th>
+                <th>Command</th>
+                <th>Timeout</th>
+                <th>Last execute</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for cronjob in cronjobs %}
+            <tr>
+                <td>{{ cronjob.id }}</td>
+                <td>
+                    {% if cronjob.cronExpression is not empty %}
+                        {{ cronjob.cronExpression }}
+                    {% else %}
+                        <span class="label label-warning">Only manual</span>
+                    {% endif %}
+                </td>
+                <td><b>{{ cronjob.command }}</b>
+                    {% if cronjob.arguments is not empty %}
+                        <br/>
+                        <b>Arguments: </b>{{ cronjob.arguments | join(' ') }}
+                    {% endif %}
+                </td>
+                <td>{{ cronjob.executeTimeout }}</td>
+                <td>{{ cronjob.lastExecution|date('H:i:s d.m.Y') }}</td>
+                <td>
+                    {% if cronjob.lastExecution is not empty %}
+                    <b>Data: </b>{{ cronjob.lastExecution|date('H:i:s d.m.Y') }}<br/>
+                    <b>Last status: </b>
+                        {% if cronjob.lastReturnCode == 0 %}
+                            <span class="label label-success">success</span>
+                        {% elseif cronjob.lastReturnCode == -10 %}
+                            <span class="label label-danger">timeout</span>
+                        {% else %}
+                            <span class="label label-danger">error: {{ cronjob.lastReturnCode }}</span>
+                        {% endif %}
+                    {% else %}
+                    <span class="label">Never</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if cronjob.disabled %}
+                    <a href="?id={{ cronjob.id }}&action=enable&rand={{ rand }}" class="btn btn-danger" title="Enable"><i class="glyphicon glyphicon-play"></i></a>
+                    {% else %}
+                    <a href="?id={{ cronjob.id }}&action=disable&rand={{ rand }}" class="btn btn-success" title="Disable"><i class="glyphicon glyphicon-pause"></i></a>
+                    {% endif %}
+                    <a href="?id={{ cronjob.id }}&action=immediately&rand={{ rand }}" class="btn btn-warning"{% if cronjob.executeImmediately %} disabled="disabled"{% endif %} title="Run execute immediately"><i class="glyphicon glyphicon glyphicon-plane"></i></a>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<footer class="site-footer">
+    AgentSIB Cronjob <a href="https://github.com/agentsib/crontab-bundle" target="_blank">Github</a>
+</footer>
+</body>
+</html>
