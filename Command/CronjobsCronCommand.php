@@ -152,7 +152,7 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
                             $manager->appendToLog(
                                 $cronjob,
-                                AbstractCrontabManager::CHANNEL_INFO,
+                                AbstractCrontabManager::CHANNEL_ERROR,
                                 sprintf('Cronjob %s completed. Exit code: %s', $cronjob->getId(), $process->getExitCode())
                             );
 
