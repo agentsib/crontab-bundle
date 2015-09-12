@@ -11,6 +11,9 @@ use Doctrine\Common\Persistence\ObjectRepository;
 
 abstract class AbstractCrontabManager
 {
+    const CHANNEL_INFO = 'INFO';
+    const CHANNEL_DEBUG = 'DEBUG';
+    const CHANNEL_ERROR = 'ERROR';
 
     /** @var  ObjectManager */
     protected $om;
@@ -25,11 +28,14 @@ abstract class AbstractCrontabManager
 
     protected $configCronjobs;
 
-    public function __construct(ConsoleCommandsParser $commandsParser, ObjectManager $om, $class)
+    protected $logPath;
+
+    public function __construct(ConsoleCommandsParser $commandsParser, ObjectManager $om, $class, $logPath)
     {
         $this->om = $om;
         $this->repository = $om->getRepository($class);
         $this->commandsParser = $commandsParser;
+        $this->logPath = $logPath;
 
         $metadata = $om->getClassMetadata($class);
         $this->class = $metadata->getName();
@@ -158,6 +164,22 @@ abstract class AbstractCrontabManager
     public function getClass ()
     {
         return $this->class;
+    }
+
+    public function appendToLog(AbstractCronjob $cronjob, $channel, $str)
+    {
+        if (!is_dir($this->logPath)) {
+            @mkdir($this->logPath);
+        }
+        if ($cronjob->getLogFile()) {
+            $date = new \DateTime();
+            $strings = explode(PHP_EOL, $str);
+            $log = '';
+            foreach ($strings as $s) {
+                $log .= sprintf('%s [%s] %s: %s'.PHP_EOL, $date->format('Y-m-d H:i:s'), $cronjob->getId(), $channel, $s);
+            }
+            @file_put_contents($this->logPath.'/'.$cronjob->getLogFile().'.log', $log, FILE_APPEND);
+        }
     }
 
 }

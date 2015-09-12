@@ -60,7 +60,7 @@ class CronjobsExecuteCommand extends Command implements ContainerAwareInterface
         ), $arguments));
 
         $inputExec->setInteractive(false);
-        $output->setDecorated(true);
+        //$output->setDecorated(true);
 
         $returnCode = -1;
         try {

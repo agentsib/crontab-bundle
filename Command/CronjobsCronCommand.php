@@ -5,6 +5,7 @@ namespace AgentSIB\CrontabBundle\Command;
 
 
 use AgentSIB\CrontabBundle\Model\AbstractCronjob;
+use AgentSIB\CrontabBundle\Model\AbstractCrontabManager;
 use Cron\CronExpression;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -66,6 +67,12 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
                 $noneExecution = false;
 
+                $manager->appendToLog(
+                    $cronjob,
+                    AbstractCrontabManager::CHANNEL_INFO,
+                    sprintf('Immediately execution for: %s', $cronjob->getId())
+                );
+
                 if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
                     $output->writeln(sprintf('Immediately execution for: <comment>%s</comment>', $cronjob->getId()));
                 }
@@ -77,8 +84,14 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
                 $noneExecution = false;
 
+                $manager->appendToLog(
+                    $cronjob,
+                    AbstractCrontabManager::CHANNEL_INFO,
+                    sprintf('Cronjob %s should be executed', $cronjob->getId())
+                );
+
                 if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
-                    $output->writeln(sprintf('Cronjob <comment>%s</comment> should be executed.', $cronjob->getId(), ''));
+                    $output->writeln(sprintf('Cronjob <comment>%s</comment> should be executed', $cronjob->getId(), ''));
                 }
 
                 if (!$input->getOption('dry-run')) {
@@ -99,13 +112,22 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
                 foreach ($processes as $jobId => $process) {
                     usleep(500000);
+                    $cronjob = $manager->getCronjobById($jobId);
                     try {
                         $process->checkTimeout();
                     } catch (\RuntimeException $e) {
                         $cronResponseCode = 1;
-                        $manager->stopCronjob($manager->getCronjobById($jobId), -10);
+
+                        $manager->stopCronjob($cronjob, -10);
+
+                        $manager->appendToLog(
+                            $cronjob,
+                            AbstractCrontabManager::CHANNEL_ERROR,
+                            sprintf('Cronjob %s killed by timeout', $cronjob->getId())
+                        );
+
                         if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
-                            $output->writeln(sprintf('Cronjob <comment>%s</comment> <error>killed by timeout</error>.', $jobId));
+                            $output->writeln(sprintf('Cronjob <comment>%s</comment> <error>killed by timeout</error>.', $cronjob->getId()));
                         }
                         unset($processes[$jobId]);
                         continue;
@@ -113,16 +135,45 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
 
                     if (!$process->isRunning()) {
+
                         if ($process->getExitCode() == 0) {
+
+                            $manager->appendToLog(
+                                $cronjob,
+                                AbstractCrontabManager::CHANNEL_INFO,
+                                sprintf('Cronjob %s success completed', $cronjob->getId())
+                            );
+
                             if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
-                                $output->writeln(sprintf('Cronjob <comment>%s</comment> success completed.', $jobId));
+                                $output->writeln(sprintf('Cronjob <comment>%s</comment> success completed', $cronjob->getId()));
                             }
                         } else {
                             $cronResponseCode = 1;
+
+                            $manager->appendToLog(
+                                $cronjob,
+                                AbstractCrontabManager::CHANNEL_INFO,
+                                sprintf('Cronjob %s completed. Exit code: %s', $cronjob->getId(), $process->getExitCode())
+                            );
+
                             if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
-                                $output->writeln(sprintf('Cronjob <comment>%s</comment> completed. <error>Exit code: %s</error>', $jobId, $process->getExitCode()));
+                                $output->writeln(sprintf('Cronjob <comment>%s</comment> completed. <error>Exit code: %s</error>', $cronjob->getId(), $process->getExitCode()));
                             }
                         }
+
+                        $manager->appendToLog(
+                            $cronjob,
+                            AbstractCrontabManager::CHANNEL_DEBUG,
+                            '----- Output: '.PHP_EOL.trim($process->getOutput()).PHP_EOL
+                        );
+                        if ($process->getErrorOutput()) {
+                            $manager->appendToLog(
+                                $cronjob,
+                                AbstractCrontabManager::CHANNEL_DEBUG,
+                                '----- Error output: '.PHP_EOL.trim($process->getErrorOutput()).PHP_EOL
+                            );
+                        }
+
 
                         if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
                             $output->writeln('-------------<info>OUTPUT</info>-------------');

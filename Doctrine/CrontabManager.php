@@ -18,12 +18,12 @@ class CrontabManager extends AbstractCrontabManager
     /** @var  EntityRepository */
     protected $repository;
 
-    public function __construct (ConsoleCommandsParser $commandsParser, ObjectManager $om, $class)
+    public function __construct(ConsoleCommandsParser $commandsParser, ObjectManager $om, $class, $logPath)
     {
         if (!$om instanceof EntityManager) {
             throw new \Exception('Wrong $om');
         }
-        parent::__construct($commandsParser, $om, $class);
+        parent::__construct($commandsParser, $om, $class, $logPath);
     }
 
 
