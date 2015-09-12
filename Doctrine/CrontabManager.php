@@ -34,7 +34,7 @@ class CrontabManager extends AbstractCrontabManager
     {
         return $this->om->createQueryBuilder()
             ->select('c')
-            ->from($this->class, 'c', 'c.name')
+            ->from($this->class, 'c', 'c.id')
             ->addOrderBy('c.priority', 'ASC')
             ->getQuery()->getResult();
     }

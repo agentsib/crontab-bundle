@@ -9,7 +9,7 @@ abstract class AbstractCronjob
     /**
      * @var string
      */
-    protected $name;
+    protected $id;
 
     /**
      * @var string
@@ -25,6 +25,11 @@ abstract class AbstractCronjob
      * @var string
      */
     protected $cronExpression;
+
+    /**
+     * @var integer
+     */
+    protected $executeTimeout;
 
     /**
      * @var \DateTime
@@ -67,6 +72,7 @@ abstract class AbstractCronjob
         $this->lastReturnCode = -1;
         $this->logFile = null;
         $this->priority = 0;
+        $this->executeTimeout = 0;
         $this->executeImmediately = false;
         $this->disabled = false;
         $this->locked = false;
@@ -75,19 +81,19 @@ abstract class AbstractCronjob
     /**
      * @return string
      */
-    public function getName ()
+    public function getId ()
     {
-        return $this->name;
+        return $this->id;
     }
 
     /**
-     * @param string $name
+     * @param string $id
      *
      * @return AbstractCronjob
      */
-    public function setName ($name)
+    public function setId ($id)
     {
-        $this->name = $name;
+        $this->id = $id;
 
         return $this;
     }
@@ -148,6 +154,26 @@ abstract class AbstractCronjob
     public function setCronExpression ($cronExpression)
     {
         $this->cronExpression = $cronExpression;
+
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getExecuteTimeout ()
+    {
+        return $this->executeTimeout;
+    }
+
+    /**
+     * @param int $executeTimeout
+     *
+     * @return AbstractCronjob
+     */
+    public function setExecuteTimeout ($executeTimeout)
+    {
+        $this->executeTimeout = $executeTimeout;
 
         return $this;
     }

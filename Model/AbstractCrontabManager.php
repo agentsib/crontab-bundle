@@ -39,45 +39,49 @@ abstract class AbstractCrontabManager
     {
         $commandsList = $this->commandsParser->getCommandsList();
 
-        foreach ($jobs as $job_id => $job) {
+        foreach ($jobs as $jobId => $job) {
             if (!in_array($job['command'], $commandsList)) {
                 throw new \Exception(sprintf('Command "%s" non exist', $job['command']));
             }
-            try {
-                CronExpression::factory($job['expression']);
-            } catch (\InvalidArgumentException $e) {
-                throw new \Exception(sprintf('Cron syntax error for job "%s": %s', $job_id, $e->getMessage()));
+            if (!is_null($job['expression'])) {
+                try {
+                    CronExpression::factory($job['expression']);
+                } catch (\InvalidArgumentException $e) {
+                    throw new \Exception(sprintf('Cron syntax error for job "%s": %s', $jobId, $e->getMessage()));
+                }
             }
+
         }
 
         $this->configCronjobs = $jobs;
     }
 
-    public function getCronjobByName($name)
+    public function getCronjobById($id)
     {
         $cronjobs = $this->getDatabaseCronjobs();
 
-        return isset($cronjobs[$name])?$cronjobs[$name]:null;
+        return isset($cronjobs[$id])?$cronjobs[$id]:null;
     }
 
     public function syncCronjobs()
     {
         $dbCronjobs = $this->getDatabaseCronjobs();
 
-        foreach ($this->configCronjobs as $job_id => $job) {
-            if (!isset($dbCronjobs[$job_id])) {
+        foreach ($this->configCronjobs as $jobId => $job) {
+            if (!isset($dbCronjobs[$jobId])) {
                 $cronjob = $this->createCronjob();
-                $cronjob->setName($job_id);
+                $cronjob->setId($jobId);
                 $this->om->persist($cronjob);
 
-                $dbCronjobs[$job_id] = $cronjob;
+                $dbCronjobs[$jobId] = $cronjob;
             } else {
-                $cronjob = $dbCronjobs[$job_id];
+                $cronjob = $dbCronjobs[$jobId];
             }
 
             $cronjob->setCommand($job['command']);
             $cronjob->setArguments($job['arguments']);
             $cronjob->setCronExpression($job['expression']);
+            $cronjob->setExecuteTimeout($job['execute_timeout']);
             $cronjob->setLogFile($job['log_file']);
         }
 
@@ -111,22 +115,6 @@ abstract class AbstractCrontabManager
      * @return AbstractCronjob[]
      */
     abstract public function getDatabaseCronjobs();
-
-    /**
-     * @return AbstractCronjob[]
-     */
-    public function getCronjobsForExecute()
-    {
-        $result = array();
-        foreach ($this->getDatabaseCronjobs() as $job_id => $cronjob) {
-            if ($cronjob->isLocked() || $cronjob->isDisabled()) {
-                continue;
-            }
-            $result[] = $cronjob;
-        }
-        return $result;
-    }
-
 
     public function flush()
     {

@@ -28,7 +28,7 @@ class CronjobsExecuteCommand extends Command implements ContainerAwareInterface
     protected function execute (InputInterface $input, OutputInterface $output)
     {
         $manager = $this->container->get('agentsib_crontab.manager');
-        $cronjob = $manager->getCronjobByName($input->getArgument('command_id'));
+        $cronjob = $manager->getCronjobById($input->getArgument('command_id'));
 
         if (!$cronjob) {
             throw new \Exception('Cronjob not found');

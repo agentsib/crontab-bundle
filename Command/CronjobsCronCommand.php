@@ -28,7 +28,7 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
         $this->setName('agentsib:crontab:cron')
             ->setDescription('Run crontab tasks');
 
-        $this->addOption('dry-run', 'r', InputOption::VALUE_OPTIONAL, 'Just show commands for execute');
+        $this->addOption('dry-run', 'r', InputOption::VALUE_NONE, 'Just show commands for execute');
     }
 
     protected function execute (InputInterface $input, OutputInterface $output)
@@ -36,13 +36,21 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
         $manager = $this->container->get('agentsib_crontab.manager');
         $manager->syncCronjobs();
 
-        $output->writeln('<info>Start cron</info>');
+        if ($input->getOption('dry-run')) {
+            $output->setVerbosity(OutputInterface::VERBOSITY_VERBOSE);
+        }
 
+        if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+            $output->writeln(sprintf('Start <comment>%s</comment> cron scripts', $input->getOption('dry-run')?"dump":"execute"));
+        }
+
+        /** @var Process[] $processes */
         $processes = array();
+        $noneExecution = true;
 
-        foreach ($manager->getCronjobsForExecute() as $cronjob) {
-
-            if ($cronjob->isDisabled() || $cronjob->isLocked()) {
+        foreach ($manager->getDatabaseCronjobs() as $cronjob) {
+            /** @var AbstractCronjob $cronjob */
+            if ($cronjob->isDisabled() || $cronjob->isLocked() || !$cronjob->getCronExpression()) {
                 continue;
             }
 
@@ -50,42 +58,83 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
             $newRunDate = $cron->getNextRunDate($cronjob->getLastExecution());
             $newDate = new \DateTime();
 
+
             if ($cronjob->isExecuteImmediately()) {
-                $output->writeln(sprintf('Immediately execution for: <comment>%s</comment>', $cronjob->getName()));
+
+                $noneExecution = false;
+
+                if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+                    $output->writeln(sprintf('Immediately execution for: <comment>%s</comment>', $cronjob->getId()));
+                }
 
                 if (!$input->getOption('dry-run')) {
-                    $processes[$cronjob->getName()] = $this->executeCommand($cronjob, $input, $output);
+                    $processes[$cronjob->getId()] = $this->executeCommand($cronjob, $input, $output);
                 }
             } elseif (!$cronjob->getLastExecution() || $newRunDate < $newDate) {
-                $output->writeln(
-                    sprintf('Command <comment>%s</comment> should be executed - last execution : <comment>%s</comment>', $cronjob->getName(), '')
-                );
+
+                $noneExecution = false;
+
+                if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+                    $output->writeln(sprintf('Cronjob <comment>%s</comment> should be executed.', $cronjob->getId(), ''));
+                }
+
                 if (!$input->getOption('dry-run')) {
-                    $processes[$cronjob->getName()] = $this->executeCommand($cronjob, $input, $output);
+                    $processes[$cronjob->getId()] = $this->executeCommand($cronjob, $input, $output);
                 }
             }
         }
 
-        while (count($processes) > 0) {
+        if ($noneExecution) {
+            if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+                $output->writeln('');
+                $output->writeln('Nothing to do');
+            }
+        } else {
+            while (count($processes) > 0) {
 
-            foreach ($processes as $job_id => $process) {
-                usleep(500000);
-                try {
-                    $process->checkTimeout();
-                } catch (\RuntimeException $e) {
+                foreach ($processes as $jobId => $process) {
+                    usleep(500000);
+                    try {
+                        $process->checkTimeout();
+                    } catch (\RuntimeException $e) {
+                        if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+                            $output->writeln(sprintf('Cronjob <comment>%s</comment> <error>killed by timeout</error>.', $jobId));
+                        }
+                        unset($processes[$jobId]);
+                        continue;
+                    }
 
-                }
 
+                    if (!$process->isRunning()) {
+                        if ($process->getExitCode() == 0) {
+                            if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+                                $output->writeln(sprintf('Cronjob <comment>%s</comment> success completed.', $jobId));
+                            }
+                        } else {
+                            if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
+                                $output->writeln(sprintf('Cronjob <comment>%s</comment> completed. <error>Exit code: %s</error>', $jobId, $process->getExitCode()));
+                            }
+                        }
 
-                if (!$process->isRunning()) {
-                    $output->writeln($process->getOutput());
-                    $output->writeln($process->getErrorOutput());
-                    $output->writeln(sprintf('Command <comment>%s</comment> completed. Exit code: %s', $job_id, $process->getExitCode()));
-                    unset($processes[$job_id]);
+                        if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
+                            $output->writeln('-------------<info>OUTPUT</info>-------------');
+                            $output->writeln($process->getOutput());
+                            $output->writeln('-----------<info>END OUTPUT</info>-----------');
+                            if ($process->getErrorOutput()) {
+                                $output->writeln('-------------<error>ERROR</error>--------------');
+                                $output->writeln($process->getErrorOutput());
+                                $output->writeln('-----------<error>END ERROR</error>-----------');
+                            }
+
+                        }
+
+                        unset($processes[$jobId]);
+                    }
                 }
             }
         }
     }
+
 
     private function executeCommand(AbstractCronjob $cronjob, InputInterface $input, OutputInterface $output)
     {
@@ -103,12 +152,13 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
         $builder->setArguments(array(
             'app/console',
             'agentsib:crontab:execute',
-            $cronjob->getName()
+            $cronjob->getId()
         ));
         $builder->setWorkingDirectory(realpath($this->container->getParameter('kernel.root_dir').'/../'));
 
         $process = $builder->getProcess();
         $process->getOutput();
+        $process->setTimeout($cronjob->getExecuteTimeout());
 
         $process->start();
 

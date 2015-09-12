@@ -16,9 +16,9 @@ class AbstractCronjobEntity extends AbstractCronjob
      *
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="NONE")
-     * @ORM\Column(name="name", type="string", length=255)
+     * @ORM\Column(name="id", type="string", length=255)
      */
-    protected $name;
+    protected $id;
 
     /**
      * @var string
@@ -37,9 +37,16 @@ class AbstractCronjobEntity extends AbstractCronjob
     /**
      * @var string
      *
-     * @ORM\Column(name="cron_expression", type="string", length=32)
+     * @ORM\Column(name="cron_expression", type="string", length=32, nullable=true)
      */
     protected $cronExpression;
+
+    /**
+     * @var integer
+     *
+     * @ORM\Column(name="execute_timeout", type="integer")
+     */
+    protected $executeTimeout;
 
     /**
      * @var \DateTime
