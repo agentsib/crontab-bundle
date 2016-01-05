@@ -216,7 +216,7 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
         $builder->setWorkingDirectory(realpath($this->container->getParameter('kernel.root_dir').'/../'));
 
         $process = $builder->getProcess();
-        $process->getOutput();
+//        $process->getOutput();
         $process->setTimeout($cronjob->getExecuteTimeout());
 
         $process->start();

@@ -43,7 +43,7 @@ class ConsoleCommandsParser
         $result = array();
         foreach ($commands['commands'] as $command) {
             $result[$command['name']] = $command;
-            if (count($command['aliases']) && $withAliases) {
+            if (isset($command['aliases']) && count($command['aliases']) && $withAliases) {
                 foreach ($command['aliases'] as $alias) {
                     $result[$alias] = $command;
                 }
