@@ -1,4 +1,4 @@
 services:
     agentsib_crontab.command_parser:
-        class: AgentSIB\CrontabBundle\Service\ConsoleCommandsParser
-        arguments: [@kernel]
+        class: 'AgentSIB\CrontabBundle\Service\ConsoleCommandsParser'
+        arguments: ['@kernel']
