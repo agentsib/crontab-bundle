@@ -4,6 +4,7 @@
 namespace AgentSIB\CrontabBundle\Command;
 
 
+use AgentSIB\CrontabBundle\Event\CronjobsCommandEvent;
 use AgentSIB\CrontabBundle\Model\AbstractCronjob;
 use AgentSIB\CrontabBundle\Model\AbstractCrontabManager;
 use Cron\CronExpression;
@@ -24,6 +25,9 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
     /** @var  ContainerInterface */
     private $container;
 
+    /**
+     * {@inheritdoc}
+     */
     protected function configure ()
     {
         $this->setName('agentsib:crontab:cron')
@@ -32,6 +36,9 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
         $this->addOption('dry-run', 'r', InputOption::VALUE_NONE, 'Just show commands for execute');
     }
 
+    /**
+     * {@inheritdoc}
+     */
     protected function execute (InputInterface $input, OutputInterface $output)
     {
         $manager = $this->container->get('agentsib_crontab.manager');
@@ -51,7 +58,6 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
         foreach ($manager->getDatabaseCronjobs() as $cronjob) {
             /** @var AbstractCronjob $cronjob */
-
             $newRunDate = new \DateTime();
             $newDate = new \DateTime();
 
@@ -59,12 +65,12 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                 if ($cronjob->isDisabled() || $cronjob->isLocked() || !$cronjob->getCronExpression()) {
                     continue;
                 }
+
                 $cron = CronExpression::factory($cronjob->getCronExpression());
                 $newRunDate = $cron->getNextRunDate($cronjob->getLastExecution());
             }
 
             if ($cronjob->isExecuteImmediately()) {
-
                 $noneExecution = false;
 
                 $manager->appendToLog(
@@ -120,10 +126,12 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
                         $manager->stopCronjob($cronjob, -10);
 
+                        $errStr = sprintf('Cronjob %s killed by timeout', $cronjob->getId());
+                        $manager->triggerEvent($cronjob, CronjobsCommandEvent::ON_EXECUTE_ERROR, $errStr);
                         $manager->appendToLog(
                             $cronjob,
                             AbstractCrontabManager::CHANNEL_ERROR,
-                            sprintf('Cronjob %s killed by timeout', $cronjob->getId())
+                            $errStr
                         );
 
                         if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
@@ -137,11 +145,12 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                     if (!$process->isRunning()) {
 
                         if ($process->getExitCode() == 0) {
-
+                            $successStr = sprintf('Cronjob %s success completed', $cronjob->getId());
+                            $manager->triggerEvent($cronjob, CronjobsCommandEvent::ON_EXECUTE_SUCCESS, $successStr, trim($process->getOutput()));
                             $manager->appendToLog(
                                 $cronjob,
                                 AbstractCrontabManager::CHANNEL_INFO,
-                                sprintf('Cronjob %s success completed', $cronjob->getId())
+                                $successStr
                             );
 
                             if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
@@ -150,10 +159,12 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                         } else {
                             $cronResponseCode = 1;
 
+                            $errStr = sprintf('Cronjob %s completed. Exit code: %s', $cronjob->getId(), $process->getExitCode());
+                            $manager->triggerEvent($cronjob, CronjobsCommandEvent::ON_EXECUTE_ERROR, $errStr);
                             $manager->appendToLog(
                                 $cronjob,
                                 AbstractCrontabManager::CHANNEL_ERROR,
-                                sprintf('Cronjob %s completed. Exit code: %s', $cronjob->getId(), $process->getExitCode())
+                                sprintf($errStr)
                             );
 
                             if ($output->getVerbosity() >= OutputInterface::VERBOSITY_VERBOSE) {
@@ -192,14 +203,12 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
                 }
             }
         }
+
         return $cronResponseCode;
     }
 
-
     private function executeCommand(AbstractCronjob $cronjob, InputInterface $input, OutputInterface $output)
     {
-        $manager = $this->container->get('agentsib_crontab.manager');
-
         $executableFinder = new PhpExecutableFinder();
 
         if (false === $php = $executableFinder->find()) {
@@ -213,6 +222,7 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
             'agentsib:crontab:execute',
             $cronjob->getId()
         ));
+
         $builder->setWorkingDirectory(realpath($this->container->getParameter('kernel.root_dir').'/../'));
 
         $process = $builder->getProcess();
@@ -225,7 +235,6 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
 
     }
 
-
     /**
      * {@inheritdoc}
      */
@@ -233,7 +242,4 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
     {
         $this->container = $container;
     }
-
-
-
 }

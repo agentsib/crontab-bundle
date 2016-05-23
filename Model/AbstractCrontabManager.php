@@ -4,10 +4,12 @@
 namespace AgentSIB\CrontabBundle\Model;
 
 
+use AgentSIB\CrontabBundle\Event\CronjobsCommandEvent;
 use AgentSIB\CrontabBundle\Service\ConsoleCommandsParser;
 use Cron\CronExpression;
 use Doctrine\Common\Persistence\ObjectManager;
 use Doctrine\Common\Persistence\ObjectRepository;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 abstract class AbstractCrontabManager
 {
@@ -30,12 +32,16 @@ abstract class AbstractCrontabManager
 
     protected $logPath;
 
-    public function __construct(ConsoleCommandsParser $commandsParser, ObjectManager $om, $class, $logPath)
+    /** @var EventDispatcherInterface */
+    protected $dispatcher;
+
+    public function __construct(ConsoleCommandsParser $commandsParser, ObjectManager $om, EventDispatcherInterface $dispatcher, $class, $logPath)
     {
         $this->om = $om;
         $this->repository = $om->getRepository($class);
         $this->commandsParser = $commandsParser;
         $this->logPath = $logPath;
+        $this->dispatcher = $dispatcher;
 
         $metadata = $om->getClassMetadata($class);
         $this->class = $metadata->getName();
@@ -182,4 +188,16 @@ abstract class AbstractCrontabManager
         }
     }
 
+    /**
+     * Dispatch crontab event
+     *
+     * @param AbstractCronjob $cronjob
+     * @param string          $eventType
+     * @param string          $str
+     */
+    public function triggerEvent(AbstractCronjob $cronjob, $eventType, $str)
+    {
+        $event = new CronjobsCommandEvent($cronjob, $str);
+        $this->dispatcher->dispatch($eventType, $event);
+    }
 }
