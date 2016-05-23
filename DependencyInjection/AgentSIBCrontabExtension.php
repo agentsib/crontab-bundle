@@ -29,6 +29,7 @@ class AgentSIBCrontabExtension extends Extension
         $container->setParameter($this->getAlias().'.db_driver', $config['db_driver']);
         $container->setParameter($this->getAlias().'.model_manager_name', $config['model_manager_name']);
         $container->setParameter($this->getAlias().'.cronjob_class', $config['cronjob_class']);
+        $container->setParameter($this->getAlias().'.cronjob_console', $config['cronjob_console']);
         $container->setParameter($this->getAlias().'.logs_path', $config['logs_path']);
 
         if ('orm' === $config['db_driver']) {

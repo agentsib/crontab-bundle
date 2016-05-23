@@ -209,7 +209,7 @@ class CronjobsCronCommand extends Command implements ContainerAwareInterface
         $builder = new ProcessBuilder();
         $builder->setPrefix($php);
         $builder->setArguments(array(
-            'app/console',
+            $this->container->getParameter('agentsib_crontab.cronjob_console'),
             'agentsib:crontab:execute',
             $cronjob->getId()
         ));

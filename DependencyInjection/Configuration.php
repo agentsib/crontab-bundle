@@ -4,6 +4,7 @@ namespace AgentSIB\CrontabBundle\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\HttpKernel\Kernel;
 
 /**
  * This is the class that validates and merges configuration from your app/config files
@@ -36,6 +37,10 @@ class Configuration implements ConfigurationInterface
                 ->end()
                 ->scalarNode('cronjob_class')
                     ->isRequired()
+                    ->cannotBeEmpty()
+                ->end()
+                ->scalarNode('cronjob_console')
+                    ->defaultValue(Kernel::MAJOR_VERSION > 2 ? 'bin/console' : 'app/console')
                     ->cannotBeEmpty()
                 ->end()
                 ->scalarNode('logs_path')
