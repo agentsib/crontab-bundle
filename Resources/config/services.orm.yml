@@ -4,6 +4,7 @@ services:
         arguments:
             - '@agentsib_crontab.command_parser'
             - '@agentsib_crontab.entity_manager'
+            - '@event_dispatcher'
             - '%agentsib_crontab.cronjob_class%'
             - '%agentsib_crontab.logs_path%'
         public: false
